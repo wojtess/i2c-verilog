@@ -42,7 +42,7 @@ localparam RECIVING_DATA_ACK = 4'b1000;
 reg prev_sda;
 reg prev_scl;
 
-reg [2:0] counter; //cunter is used for counting bits of recived address and data
+reg [2:0] counter; //counter is used for counting bits of recived address and data
 
 always@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
@@ -109,7 +109,6 @@ always@(posedge clk or negedge rst_n) begin
         
     end
 end
-
 
 endmodule
 
