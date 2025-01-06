@@ -68,54 +68,56 @@ always@(posedge clk or negedge rst_n) begin
         prev_sda <= pin_sda_synced;
         prev_scl <= pin_scl_synced;
         
-        if(state == IDLE) begin
-            //START condition detection
-            if((prev_sda == 1'b1 && pin_sda_synced == 1'b0) /* falling edge sda */ && (prev_scl == 1'b1 && pin_scl_synced == 1'b1) /* scl equals 1 */ ) begin
-                next_state <= RECIVING_ADDRESS;
-                counter <= 3'b111;
-            end
-        end
-        if(state == RECIVING_ADDRESS) begin
-            if(prev_scl == 1'b0 && pin_scl_synced == 1'b1 /* rising edge scl */) begin
-                addr[counter] <= pin_sda_synced;
-                counter <= counter - 1;
-                if(counter == 0) begin
-                    next_state <= RECIVING_ADDRESS_ACK;
+        if(pin_scl_synced == 1'b1 && (prev_sda == 1'b0 && pin_sda_synced == 1'b1)) begin
+            next_state <= IDLE;
+        end else begin
+            if(state == IDLE) begin
+                //START condition detection
+                if((prev_sda == 1'b1 && pin_sda_synced == 1'b0) /* falling edge sda */ && (prev_scl == 1'b1 && pin_scl_synced == 1'b1) /* scl equals 1 */ ) begin
+                    next_state <= RECIVING_ADDRESS;
+                    counter <= 3'b111;
                 end
             end
-        end
-        if(state == RECIVING_DATA) begin
-            if(pin_scl_synced == 1'b1 && (prev_sda == 1'b0 && pin_sda_synced == 1'b1)) begin
-                next_state <= IDLE;
-            end else if(prev_scl == 1'b0 && pin_scl_synced == 1'b1 /* rising edge scl */) begin
-                //pun new information into data_in buffer and decrase counter
-                data_in[counter] <= pin_sda_synced;
-                counter <= counter - 1;
-                if(counter == 0) begin
-                    next_state <= RECIVING_DATA_ACK;
-                    //give information to parent module that there is values in `data_in`
-                    data_in_ready <= 1'b1;
-                    //Incremet address for next byte
-                    //if there is no next byte(STOP command on i2c) address will be eventauly overwrited
-                    //if there is next byte it will be saved into `data_in` and putted into higher memory address
-                    addr <= addr + 8'b1;
+            if(state == RECIVING_ADDRESS) begin
+                if(prev_scl == 1'b0 && pin_scl_synced == 1'b1 /* rising edge scl */) begin
+                    addr[counter] <= pin_sda_synced;
+                    counter <= counter - 1;
+                    if(counter == 0) begin
+                        next_state <= RECIVING_ADDRESS_ACK;
+                    end
                 end
             end
-        end
+            if(state == RECIVING_DATA) begin
+                if(prev_scl == 1'b0 && pin_scl_synced == 1'b1 /* rising edge scl */) begin
+                    //pun new information into data_in buffer and decrase counter
+                    data_in[counter] <= pin_sda_synced;
+                    counter <= counter - 1;
+                    if(counter == 0) begin
+                        next_state <= RECIVING_DATA_ACK;
+                        //give information to parent module that there is values in `data_in`
+                        data_in_ready <= 1'b1;
+                        //Incremet address for next byte
+                        //if there is no next byte(STOP command on i2c) address will be eventauly overwrited
+                        //if there is next byte it will be saved into `data_in` and putted into higher memory address
+                        addr <= addr + 8'b1;
+                    end
+                end
+            end
 
-        if(data_in_ready == 1'b1) begin
-            data_in_ready <= 1'b0;
-        end
+            if(data_in_ready == 1'b1) begin
+                data_in_ready <= 1'b0;
+            end
 
-        //ACK
-        if(prev_scl == 1'b1 && pin_scl_synced == 1'b0 && (state == RECIVING_ADDRESS_ACK || state == RECIVING_DATA_ACK)) begin
-            sda_out <= 1'b0;
-        end
-        if(prev_scl == 1'b1 && pin_scl_synced == 1'b0/* falling edge scl */ && sda_out == 1'b0) begin
-            sda_out <= 1'b1;
-            //chaning state for RECIVING_DATA after RECIVING_DATA_ACK to enable support for multi byte data transfer 
-            if(state == RECIVING_ADDRESS_ACK || state == RECIVING_DATA_ACK) begin
-                next_state <= RECIVING_DATA;
+            //ACK
+            if(prev_scl == 1'b1 && pin_scl_synced == 1'b0 && (state == RECIVING_ADDRESS_ACK || state == RECIVING_DATA_ACK)) begin
+                sda_out <= 1'b0;
+            end
+            if(prev_scl == 1'b1 && pin_scl_synced == 1'b0/* falling edge scl */ && sda_out == 1'b0) begin
+                sda_out <= 1'b1;
+                //chaning state for RECIVING_DATA after RECIVING_DATA_ACK to enable support for multi byte data transfer 
+                if(state == RECIVING_ADDRESS_ACK || state == RECIVING_DATA_ACK) begin
+                    next_state <= RECIVING_DATA;
+                end
             end
         end
     end

@@ -30,6 +30,7 @@ i2c_slave tested_module(
 
 task START;
 begin
+    pin_sda_out_en = 1;
     pin_scl = 1;
     pin_sda_out = 1;
     #10 pin_sda_out = 0;
@@ -37,8 +38,18 @@ begin
 end
 endtask
 
+task STOP;
+begin
+    pin_sda_out_en = 1;
+    pin_sda_out = 0;
+    pin_scl = 1;
+    #10 pin_sda_out = 1;
+end
+endtask
+
 task ZERO;
 begin
+    pin_sda_out_en = 1;
     #1 pin_sda_out = 0;
     #9 pin_scl = 1;
     #10 pin_scl = 0;
@@ -47,9 +58,26 @@ endtask
 
 task ONE;
 begin
+    pin_sda_out_en = 1;
     #1 pin_sda_out = 1;
     #9 pin_scl = 1;
     #10 pin_scl = 0;
+end
+endtask
+
+task ACK;
+input integer num;
+begin
+    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0
+    pin_sda_out_en = 0;
+    #10 pin_scl = 1;
+    if (pin_sda !== 0) begin
+        $display("  Recived NACK when expected ACK(%0d)", num);//it looks better than error in my opinion
+    end else begin
+        $display("  Recived ACK as expected(%0d)", num);
+    end
+    #10 pin_scl = 0;
+    #10 pin_sda_out_en = 1;
 end
 endtask
 
@@ -61,16 +89,8 @@ task SEND_DATA;
 input integer exec_num;
 begin
     $display("Starting execution %0d", exec_num);
+
     pin_sda_out_en = 1;
-    
-    #10 pin_scl = 1;
-    #10 pin_scl = 0;
-
-    pin_scl = 1;
-    pin_sda_out = 1;
-
-    #10 pin_sda_out = 0;
-    pin_scl = 0;
 
     START();
 
@@ -83,16 +103,7 @@ begin
     ZERO();
     ONE();//WRITE
 
-    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0
-    pin_sda_out_en = 0;
-    #10 pin_scl = 1;
-    if (pin_sda !== 0) begin
-        $display("  Recived NACK when expected ACK(1)");//it looks better than error in my opinion
-    end else begin
-        $display("  Recived ACK as expected(1)");
-    end
-    #10 pin_scl = 0;
-    pin_sda_out_en = 1;
+    ACK(1);
     
     ZERO();
     ONE();
@@ -103,16 +114,7 @@ begin
     ZERO();
     ONE();
 
-    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0 on waveform
-    pin_sda_out_en = 0;
-    #10 pin_scl = 1;
-    if (pin_sda !== 0) begin
-        $display("  Recived NACK when expected ACK(2)");//it looks better than error in my opinion
-    end else begin
-        $display("  Recived ACK as expected(2)");
-    end
-    #10 pin_scl = 0;
-    pin_sda_out_en = 1;
+    ACK(2);
 
     ZERO();
     ONE();
@@ -123,25 +125,9 @@ begin
     ZERO();
     ZERO();
 
-    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0 on waveform
-    pin_sda_out_en = 0;
-    #10 pin_scl = 1;
-    if (pin_sda !== 0) begin
-        $display("  Recived NACK when expected ACK(3)");//it looks better than error in my opinion
-    end else begin
-        $display("  Recived ACK as expected(3)");
-    end
-    #10 pin_scl = 0;
-    pin_sda_out_en = 1;
+    ACK(3);
 
-    #10 pin_scl = 1;
-    #10 pin_scl = 0;
-
-
-    //Need to be set 0 beacuse it is `z` now.
-    pin_sda_out = 0;
-    pin_scl = 1;
-    #10 pin_sda_out = 1;
+    STOP();
 
     $display("Ended execution %0d", exec_num);
 end
