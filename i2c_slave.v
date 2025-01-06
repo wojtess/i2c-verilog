@@ -31,13 +31,13 @@ sync_pin sync_pin_sda(
     .pin_synced(pin_sda_synced)
 );
 
-reg [4:0] state;
-reg [4:0] next_state;
-localparam IDLE = 4'b0000;
-localparam RECIVING_ADDRESS = 4'b0001;
-localparam RECIVING_DATA = 4'b0010;
-localparam RECIVING_ADDRESS_ACK = 4'b0100;
-localparam RECIVING_DATA_ACK = 4'b1000;
+reg [5:0] state;
+reg [5:0] next_state;
+localparam IDLE = 5'b00000;
+localparam RECIVING_ADDRESS = 5'b00001;
+localparam RECIVING_DATA = 5'b00010;
+localparam RECIVING_ADDRESS_ACK = 5'b00100;
+localparam RECIVING_DATA_ACK = 5'b01000;
 
 reg prev_sda;
 reg prev_scl;
@@ -48,8 +48,9 @@ always@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         state <= IDLE;
     end
-    if(next_state != state)
+    else begin
         state <= next_state;
+    end
 end
 
 always@(posedge clk or negedge rst_n) begin
@@ -66,6 +67,7 @@ always@(posedge clk or negedge rst_n) begin
     else begin
         prev_sda <= pin_sda_synced;
         prev_scl <= pin_scl_synced;
+        
         if(state == IDLE) begin
             //START condition detected
             if((prev_sda == 1'b1 && pin_sda_synced == 1'b0) /* falling edge sda */ && (prev_scl == 1'b1 && pin_scl_synced == 1'b1) /* scl equals 1 */ ) begin
@@ -83,30 +85,33 @@ always@(posedge clk or negedge rst_n) begin
             end
         end
         if(state == RECIVING_DATA) begin
-            if(prev_scl == 1'b0 && pin_scl_synced == 1'b1 /* rising edge scl */) begin
+            if(pin_scl_synced == 1'b1 && (prev_sda == 1'b0 && pin_sda_synced == 1'b1)) begin
+                next_state <= IDLE;
+            end else if(prev_scl == 1'b0 && pin_scl_synced == 1'b1 /* rising edge scl */) begin
                 data_in[counter] <= pin_sda_synced;
                 counter <= counter - 1;
                 if(counter == 0) begin
                     next_state <= RECIVING_DATA_ACK;
                     data_in_ready <= 1'b1;
+                    addr <= addr + 8'b1;
                 end
             end
         end
+
+        if(data_in_ready == 1'b1) begin
+            data_in_ready <= 1'b0;
+        end
+
         //ACK
         if(prev_scl == 1'b1 && pin_scl_synced == 1'b0 && (state == RECIVING_ADDRESS_ACK || state == RECIVING_DATA_ACK)) begin
             sda_out <= 1'b0;
         end
-        if(prev_scl == 1'b1 && pin_scl_synced == 1'b0 && sda_out == 1'b0) begin
+        if(prev_scl == 1'b1 && pin_scl_synced == 1'b0/* falling edge scl */ && sda_out == 1'b0) begin
             sda_out <= 1'b1;
-            if(state == RECIVING_ADDRESS_ACK) begin
+            if(state == RECIVING_ADDRESS_ACK || state == RECIVING_DATA_ACK) begin
                 next_state <= RECIVING_DATA;
             end
-            if(state == RECIVING_DATA_ACK) begin
-                next_state <= IDLE;
-                data_in_ready <= 1'b0;
-            end
         end
-        
     end
 end
 

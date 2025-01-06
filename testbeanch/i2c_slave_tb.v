@@ -54,7 +54,7 @@ end
 endtask
 
 always @(posedge data_in_ready) begin
-    $display("recived data: %b, recived address: %b", data_in, addr);
+    $display("  recived data: %b, recived address: %b", data_in, addr);
 end
 
 task SEND_DATA;
@@ -114,8 +114,32 @@ begin
     #10 pin_scl = 0;
     pin_sda_out_en = 1;
 
+    ZERO();
+    ONE();
+    ONE();
+    ONE();
+    ZERO();
+    ONE();
+    ZERO();
+    ZERO();
+
+    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0
+    pin_sda_out_en = 0;
+    #10 pin_scl = 1;
+    if (pin_sda !== 0) begin
+        $display("  Recived NACK when expected ACK(3)");//it looks better than error in my opinion
+    end else begin
+        $display("  Recived ACK as expected(3)");
+    end
+    #10 pin_scl = 0;
+    pin_sda_out_en = 1;
+
     #10 pin_scl = 1;
     #10 pin_scl = 0;
+
+    pin_sda_out = 0;
+    pin_scl = 1;
+    #10 pin_sda_out = 1;
 
     $display("Ended execution %0d", exec_num);
 end
