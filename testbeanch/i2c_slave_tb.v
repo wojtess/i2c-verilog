@@ -103,7 +103,7 @@ begin
     ZERO();
     ONE();
 
-    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0
+    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0 on waveform
     pin_sda_out_en = 0;
     #10 pin_scl = 1;
     if (pin_sda !== 0) begin
@@ -123,7 +123,7 @@ begin
     ZERO();
     ZERO();
 
-    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0
+    pin_sda_out = 1'bz;//so it easier to see when pin_sda_out_en = 0 on waveform
     pin_sda_out_en = 0;
     #10 pin_scl = 1;
     if (pin_sda !== 0) begin
@@ -137,6 +137,8 @@ begin
     #10 pin_scl = 1;
     #10 pin_scl = 0;
 
+
+    //Need to be set 0 beacuse it is `z` now.
     pin_sda_out = 0;
     pin_scl = 1;
     #10 pin_sda_out = 1;
